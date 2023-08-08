@@ -21,6 +21,62 @@ export default class Board extends React.Component {
       complete: React.createRef(),
     }
   }
+
+  componentDidMount() {
+    // Set up dragula containers
+    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
+    this.drake = Dragula(containers, {
+      isContainer: (el) => el.classList.contains('Swimlane'),
+    });
+
+    this.drake.on('drop', (el, target, source) => {
+      this.handleClientDrop(el, target);
+    });
+
+  }
+
+  handleClientDrop(droppedElement, targetSwimlane) {
+    const clientId = droppedElement.dataset.id;
+    const newStatus = targetSwimlane.dataset.status; // Get the new status from the target swimlane
+    console.log(newStatus)
+    // Update the client's status based on the newStatus
+    const updatedClients = {
+      ...this.state.clients,
+      backlog: this.state.clients.backlog.map(client => (client.id === clientId ? { ...client, status: newStatus } : client)),
+      inProgress: this.state.clients.inProgress.map(client => (client.id === clientId ? { ...client, status: newStatus } : client)),
+      complete: this.state.clients.complete.map(client => (client.id === clientId ? { ...client, status: newStatus } : client)),
+    };
+
+    this.setState({ clients: updatedClients }, () => {
+      // Get the updated status of the dragged client
+      const updatedStatus = newStatus;
+
+      // Update the background color of the dragged element based on the updated status
+      switch (updatedStatus) {
+        case 'backlog':
+          droppedElement.style.backgroundColor = 'rgba(167, 158, 158, 0.671)';
+          break;
+        case 'in-progress':
+          droppedElement.style.backgroundColor = 'skyblue';
+          break;
+        case 'complete':
+          droppedElement.style.backgroundColor = 'rgb(150, 190, 150)';
+          break;
+        default:
+          // Reset the background color if status is unknown
+          droppedElement.style.backgroundColor = '';
+          break;
+      }
+    });
+  }
+
+
+  getClientById(id) {
+    return this.state.clients.backlog
+      .concat(this.state.clients.inProgress, this.state.clients.complete)
+      .find((client) => client.id === id);
+  }
+
   getClients() {
     return [
       ['1','Stark, White and Abbott','Cloned Optimal Architecture', 'in-progress'],
@@ -50,9 +106,9 @@ export default class Board extends React.Component {
       status: companyDetails[3],
     }));
   }
-  renderSwimlane(name, clients, ref) {
+  renderSwimlane(name, clients, ref,status) {
     return (
-      <Swimlane name={name} clients={clients} dragulaRef={ref}/>
+      <Swimlane name={name} clients={clients} dragulaRef={ref} status={status} />
     );
   }
 
@@ -62,13 +118,13 @@ export default class Board extends React.Component {
         <div className="container-fluid">
           <div className="row">
             <div className="col-md-4">
-              {this.renderSwimlane('Backlog', this.state.clients.backlog, this.swimlanes.backlog)}
+              {this.renderSwimlane('Backlog', this.state.clients.backlog, this.swimlanes.backlog,'backlog')}
             </div>
             <div className="col-md-4">
-              {this.renderSwimlane('In Progress', this.state.clients.inProgress, this.swimlanes.inProgress)}
+              {this.renderSwimlane('In Progress', this.state.clients.inProgress, this.swimlanes.inProgress,'in-progress')}
             </div>
             <div className="col-md-4">
-              {this.renderSwimlane('Complete', this.state.clients.complete, this.swimlanes.complete)}
+              {this.renderSwimlane('Complete', this.state.clients.complete, this.swimlanes.complete,'complete')}
             </div>
           </div>
         </div>
